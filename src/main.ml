@@ -4,6 +4,7 @@
 
 (**  main file, Execution from command line, connection info, help printouts for command line usage etc.
 *)
+
 open Lib
 open Formulas
 open Fol
@@ -21,6 +22,7 @@ open Ast2theorem
 open Ast2fol
 open Bx
 open Expr
+open Yojson.Basic.Util
 
 (** check for options of command line*)
 (*default values*)
@@ -390,10 +392,20 @@ let main () =
     if (!verification) then print_endline @@ "-- Program is validated --";
     let oc =if !outputf = "" then stdout else open_out !outputf  in
     if (not has_get) then fprintf oc "\n/*view definition (get):\n%s*/\n\n" view_rules_string;
-    let sql = Ast2sql.unfold_view_sql (!dbschema) (!log) ast2 in
-    fprintf oc "%s\n" sql;
-    let trigger_sql = Ast2sql.unfold_delta_trigger_stt (!dbschema) (!log) (!dejima_ud) shell_script (!dejima_user) (!inc) (!optimize) (constraint2rule ast2) in
-    fprintf oc "%s\n" trigger_sql;
+
+    printf "ast2 json representation \n\n";
+    let json = Ast2json.json_of_expr ast2 in
+    let json_str = Yojson.Basic.pretty_to_string json in
+    fprintf oc "%s\n" json_str;
+
+    printf "\n\n ast2 datalog representation \n\n";
+    let human_readable_expr = Expr.string_of_expr ast2 in
+    fprintf oc "%s\n" human_readable_expr;
+
+    (* let sql = Ast2sql.unfold_view_sql (!dbschema) (!log) ast2 in *)
+    (* fprintf oc "%s\n" sql; *)
+    (* let trigger_sql = Ast2sql.unfold_delta_trigger_stt (!dbschema) (!log) (!dejima_ud) shell_script (!dejima_user) (!inc) (!optimize) (constraint2rule ast2) in *)
+    (* fprintf oc "%s\n" trigger_sql; *)
 
     if (!connectdb) then
       let c = new connection ~conninfo () in
@@ -402,7 +414,7 @@ let main () =
         flush stdout
       ) else ();
       c#set_notice_processor (fun s -> eprintf "postgresql error [%s]\n" s);
-    print_creating_sql c (sql^trigger_sql);
+    (* print_creating_sql c (sql^trigger_sql); *)
     close_out oc;
     c#finish)
 

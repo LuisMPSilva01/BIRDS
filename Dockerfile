@@ -1,19 +1,19 @@
-FROM ubuntu:16.04
-MAINTAINER dangtv <dangtv18@gmail.com>
+FROM ubuntu:22.04
 
 ENV OS_LOCALE="en_US.UTF-8" \
     LANG=${OS_LOCALE} \
     LANGUAGE=${OS_LOCALE} \
     LC_ALL=${OS_LOCALE} \
-    PG_VERSION=9.6 \
+    PG_VERSION=14 \
     OCAML_VERSION=4.07.0 \
     Z3_VERSION=4.8.7 \
-    RACKET_VERSION=8.0 \
+    RACKET_VERSION=8.1 \
     NODE_VERSION=8.16.0 \
     PG_USER=postgres \
     PG_HOME=/var/lib/postgresql \
     PG_RUN_DIR=/run/postgresql \
-    PG_LOG_DIR=/var/log/postgresql
+    PG_LOG_DIR=/var/log/postgresql\
+    DEBIAN_FRONTEND=noninteractive
 
 ENV PG_CONF_DIR="/etc/postgresql/${PG_VERSION}/main" \
     PG_BIN_DIR="/usr/lib/postgresql/${PG_VERSION}/bin" \
@@ -23,10 +23,10 @@ RUN apt-get update && apt-get install -y locales && locale-gen ${OS_LOCALE} \
  && dpkg-reconfigure locales && rm -rf /var/lib/apt/lists/*
 
 # installing postgresql
-RUN apt-get update && apt-get install -y wget \
- && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
- && echo 'deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
- && apt-get update && apt-get install -y postgresql-${PG_VERSION} postgresql-client-${PG_VERSION} \
+RUN apt-get update && apt-get install -y wget ca-certificates gnupg2 lsb-release\
+# && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+# && echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list \
+ && apt-get install -y postgresql-${PG_VERSION} postgresql-client-${PG_VERSION} \
  postgresql-contrib-${PG_VERSION} postgresql-server-dev-${PG_VERSION} postgresql-common \
  && locale-gen ${OS_LOCALE} \
  && systemctl enable postgresql \
@@ -45,7 +45,8 @@ RUN BUILD_PKGS="git build-essential make" \
  && RUNTIME_PKGS="" \
  && apt-get update && apt-get install -y ${BUILD_PKGS} ${RUNTIME_PKGS} \
  && git clone https://github.com/petere/plsh \
- && cd plsh && git checkout 9b108516a005a0592d9c9e145189825f92f820e1 \
+ && cd plsh \
+ #&& git checkout 9b108516a005a0592d9c9e145189825f92f820e1 \
  && make && make install \
  && rm -rf /root/plsh \
  && apt-get purge -y --auto-remove ${BUILD_PKGS} \
@@ -97,7 +98,7 @@ WORKDIR /usr/lib/birds/verification/
 RUN BUILD_PKGS="git" \
  && RUNTIME_PKGS="" \
  && apt-get update && apt-get install -y ${BUILD_PKGS} ${RUNTIME_PKGS} \
- && leanpkg configure && cd /usr/lib/birds/verification/_target/deps/mathlib/ && leanpkg configure && leanpkg build -- --threads=1 \
+ && leanpkg configure && cd /usr/lib/birds/verification/_target/deps/mathlib/ && leanpkg configure && leanpkg build -- --threads=8 \
  && cd /usr/lib/birds/verification/_target/deps/super/ && leanpkg configure && leanpkg build \
  && cd /usr/lib/birds/verification/ && leanpkg build \
  && apt-get purge -y --auto-remove ${BUILD_PKGS} \
@@ -120,7 +121,7 @@ RUN BUILD_PKGS="wget libgtk2.0" \
 # installing BIRDS web-based editor
 COPY webui /usr/lib/birds/webui
 WORKDIR /usr/lib/birds/webui/
-RUN BUILD_PKGS="python build-essential make" \
+RUN BUILD_PKGS="python3 build-essential make" \
  && RUNTIME_PKGS="" \
  && apt-get update && apt-get install -y ${BUILD_PKGS} ${RUNTIME_PKGS} \
  && scripts/build.sh && rm -rf client && rm -rf scripts && rm -rf node_modules \
@@ -129,22 +130,22 @@ RUN BUILD_PKGS="python build-essential make" \
  && rm -rf /var/lib/apt/lists/*
 
 # installing BIRDS
-COPY src /root/birds/src
-COPY Makefile /root/birds/
+ENV OCAML_VERSION=5.2.0
 WORKDIR /root/
-RUN BUILD_PKGS="wget build-essential git make opam m4" \
+RUN BUILD_PKGS="wget build-essential git make opam m4 libpq-dev" \
  && RUNTIME_PKGS="" \
  && apt-get update && apt-get install -y ${BUILD_PKGS} ${RUNTIME_PKGS} \
  && wget https://github.com/ocaml/ocaml/archive/${OCAML_VERSION}.tar.gz \
  && tar -xzvf ${OCAML_VERSION}.tar.gz && cd ocaml-${OCAML_VERSION} && ./configure && make world.opt && umask 022 && make install \ 
  && rm -rf /root/ocaml-${OCAML_VERSION} \
- && rm /root/${OCAML_VERSION}.tar.gz \
- && echo "y" | opam init && eval `opam config env` \
- && opam install -y num postgresql \
+ && rm /root/${OCAML_VERSION}.tar.gz
+COPY src /root/birds/src
+COPY Makefile /root/birds/
+RUN echo "y" | opam init --disable-sandboxing -y && eval `opam config env` \
+ && opam install -y num postgresql yojson \
  && cd /root/birds && make depend && make release \
  && mv release/birds /usr/bin/ \
  && make clean \
- # clean
  && apt-get purge -y --auto-remove ${BUILD_PKGS} \
  && rm -rf /var/lib/apt/lists/* \
  && rm -rf /root/.opam \
@@ -162,3 +163,5 @@ VOLUME ["${PG_HOME}", "${PG_RUN_DIR}"]
 
 CMD ["/sbin/dockerentrypoint.sh"]
 # CMD ["/bin/bash"]
+
+

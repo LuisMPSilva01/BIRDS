@@ -422,6 +422,11 @@ let string_of_fact (rt) = string_of_rterm rt ^ ".\n"
 
 let string_of_rule (p, tel) = string_of_rterm p ^ " :- " ^ String.concat " , " (List.map string_of_term tel) ^ ".\n"
 
+let string_of_primary_key (pk: primary_key) =
+  let (relname, attrs) = pk in
+    "PK(" ^ relname ^ ", [" ^
+    (String.concat ", " (List.map (fun att -> "'" ^ att ^ "'") attrs)) ^ "]).\n"
+
 (** smart stringify for AST *)
 let to_string { rules; facts; query; sources; view; constraints; primary_keys; } = 
   (List.fold_right (^) (List.map string_of_source sources) "") ^
@@ -449,3 +454,21 @@ let stype_of_const c = match c with
     | String _ -> Sstring 
     | Bool _ -> Sbool
     | Null -> invalid_arg "Null does not have type"
+
+let string_of_expr expr =
+  let rules_str = String.concat "" (List.map string_of_rule expr.rules) in
+  let facts_str = String.concat "" (List.map string_of_fact expr.facts) in
+  let query_str = match expr.query with
+    | Some q -> string_of_query q
+    | None -> ""
+  in
+  let sources_str = String.concat "" (List.map string_of_source expr.sources) in
+  let view_str = match expr.view with
+    | Some v -> string_of_view v
+    | None -> ""
+  in
+  let constraints_str = String.concat "" (List.map string_of_constraint expr.constraints) in
+  let primary_keys_str = String.concat "" (List.map string_of_primary_key expr.primary_keys) in
+
+  (* Combine everything together *)
+  rules_str ^ facts_str ^ query_str ^ sources_str ^ view_str ^ constraints_str ^ primary_keys_str

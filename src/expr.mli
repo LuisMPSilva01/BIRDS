@@ -142,3 +142,5 @@ val str_to_namedvar : string -> var
 val stringlist_to_varlist : string list -> var list
 val string_of_prog : expr -> string
 val stype_of_const : const -> stype
+
+val string_of_expr : expr -> string

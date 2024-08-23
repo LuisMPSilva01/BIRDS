@@ -1,4 +1,4 @@
-PACKAGES=postgresql,str,num
+PACKAGES=postgresql,str,num,yojson
 
 # create directory if not exist
 DIR_GUARD=@mkdir -p $(@D)
@@ -18,7 +18,7 @@ LOGIC_RELEASE_DIR = release/logic
 OBJ_DIR=${SOURCE_DIR}
 LOGIC_OBJ_DIR=${LOGIC_SOURCE_DIR}
 
-OCAMLC_FLAGS=-bin-annot -w -26  -I $(OBJ_DIR) -I $(LOGIC_OBJ_DIR)
+OCAMLC_FLAGS=-bin-annot -w -26  -I $(OBJ_DIR) -I $(LOGIC_OBJ_DIR) 
 OCAMLOPT_FLAGS=-bin-annot -w -26 -I $(RELEASE_DIR) -I $(LOGIC_RELEASE_DIR)
 OCAMLDEP_FLAGS=-I $(SOURCE_DIR) -I $(LOGIC_SOURCE_DIR)
 
@@ -35,13 +35,14 @@ TOP_FILES=\
 	conn_ops\
 	rule_preprocess stratification derivation \
 	bottom_up evaluation\
-	ast2fol ast2sql ast2ros\
+	ast2fol ast2sql ast2ros \
+	ast2json \
 	ast2theorem \
 	bx\
 	debugger\
 
 TOP_FILES_WITH_MLI=\
-	parser expr conversion ast2sql ast2theorem\
+	parser expr conversion ast2sql ast2theorem ast2json\
 
 FILES=\
     $(LOGIC_FILES:%=logic/%)\
@@ -69,7 +70,7 @@ $(SOURCE_DIR)/lexer.ml:	$(SOURCE_DIR)/lexer.mll
 #With mli files.
 $(TOP_FILES_WITH_MLI:%=$(OBJ_DIR)/%.cmi): $(OBJ_DIR)/%.cmi: $(SOURCE_DIR)/%.mli
 	$(DIR_GUARD)
-	ocamlfind ocamlc $(OCAMLC_FLAGS) -o $(OBJ_DIR)/$* -c $<
+	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -o $(OBJ_DIR)/$* -c $<
 
 $(TOP_FILES_WITH_MLI:%=$(OBJ_DIR)/%.cmo): $(OBJ_DIR)/%.cmo: $(SOURCE_DIR)/%.ml $(OBJ_DIR)/%.cmi
 	$(DIR_GUARD)
@@ -77,7 +78,7 @@ $(TOP_FILES_WITH_MLI:%=$(OBJ_DIR)/%.cmo): $(OBJ_DIR)/%.cmo: $(SOURCE_DIR)/%.ml $
 
 $(LOGIC_FILES_WITH_MLI:%=$(LOGIC_OBJ_DIR)/%.cmi): $(LOGIC_OBJ_DIR)/%.cmi: $(LOGIC_SOURCE_DIR)/%.mli
 	$(DIR_GUARD)
-	ocamlfind ocamlc $(OCAMLC_FLAGS) -o $(LOGIC_OBJ_DIR)/$* -c $<
+	ocamlfind ocamlc $(OCAMLC_FLAGS) -package $(PACKAGES) -o $(LOGIC_OBJ_DIR)/$* -c $<
 
 $(LOGIC_FILES_WITH_MLI:%=$(LOGIC_OBJ_DIR)/%.cmo): $(LOGIC_OBJ_DIR)/%.cmo: $(LOGIC_SOURCE_DIR)/%.ml $(LOGIC_OBJ_DIR)/%.cmi
 	$(DIR_GUARD)
@@ -120,7 +121,7 @@ $(RELEASE_DIR)/parser.cmx:	$(SOURCE_DIR)/parser.ml $(RELEASE_DIR)/parser.cmi
 #With mli files.
 $(TOP_FILES_WITH_MLI:%=$(RELEASE_DIR)/%.cmi): $(RELEASE_DIR)/%.cmi: $(SOURCE_DIR)/%.mli
 	$(DIR_GUARD)
-	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -o $(RELEASE_DIR)/$* -c $<
+	ocamlfind ocamlopt $(OCAMLOPT_FLAGS) -package $(PACKAGES) -o $(RELEASE_DIR)/$* -c $<
 
 $(TOP_FILES_WITH_MLI:%=$(RELEASE_DIR)/%.cmo): $(RELEASE_DIR)/%.cmo: $(SOURCE_DIR)/%.ml $(RELEASE_DIR)/%.cmi
 	$(DIR_GUARD)
