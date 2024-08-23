@@ -28,7 +28,7 @@ let rec json_of_vterm vt = match vt with
 (* JSON representation of eterm *)
 let json_of_eterm et = match et with
   | Equation (op, vt1, vt2) ->
-      `Assoc [("Equation", `Assoc [("op", `String op); ("left", json_of_vterm vt1); ("right", json_of_vterm vt2)])]
+      `Assoc [("op", `String op); ("left", json_of_vterm vt1); ("right", json_of_vterm vt2)]
 
 (* JSON representation of rterm *)
 let json_of_rterm rt = match rt with
@@ -55,7 +55,7 @@ let json_of_stype st = match st with
 
 (* JSON representation of rule *)
 let json_of_rule (rt, terms) =
-  `Assoc [("rule", `Assoc [("rterm", json_of_rterm rt); ("terms", `List (List.map json_of_term terms))])]
+  `Assoc [("rterm", json_of_rterm rt); ("terms", `List (List.map json_of_term terms))]
 
 (* JSON representation of fact *)
 let json_of_fact rt = `Assoc [("fact", json_of_rterm rt)]
@@ -65,38 +65,26 @@ let json_of_query = function
   | Some q -> `Assoc [("query", json_of_rterm q)]
   | None -> `Null
 
+
 (* JSON representation of source *)
-let json_of_source (name, lst) =
+let json_of_table (name, lst) =
   `Assoc [
-    ("source", 
-      `Assoc [
-        ("name", `String name); 
-        ("columns", 
-          `Assoc (List.map (fun (col, typ) -> (col, json_of_stype typ)) lst)
-        )
-      ]
-    )
+    ("name", `String name);
+    ("columns", `List (List.map (fun (col, typ) -> `Assoc [
+                                                      ("columnName", `String col); 
+                                                      ("columnType", json_of_stype typ)
+                                                    ]) lst))
   ]
 
 (* JSON representation of view *)
 let json_of_view = function
-  | Some (name, lst) ->
-      `Assoc [
-        ("view", 
-          `Assoc [
-            ("name", `String name); 
-            ("columns", 
-              `Assoc (List.map (fun (col, typ) -> (col, json_of_stype typ)) lst)
-            )
-          ]
-        )
-      ]
+  | Some t -> json_of_table t
   | None -> `Null
 
 
 (* JSON representation of constraint' *)
-let json_of_constraint' (rt, terms) =
-  `Assoc [("constraint", `Assoc [("rterm", json_of_rterm rt); ("terms", `List (List.map json_of_term terms))])]
+let json_of_constraint' (rt, terms) = 
+  `Assoc [("rterm", json_of_rterm rt); ("terms", `List (List.map json_of_term terms))]
 
 (* JSON representation of primary_key *)
 let json_of_primary_key (name, attrs) =
@@ -106,9 +94,9 @@ let json_of_primary_key (name, attrs) =
 let json_of_expr e =
   `Assoc [
     ("rules", `List (List.map json_of_rule e.rules));
-    ("facts", `List (List.map json_of_fact e.facts));
+    ("facts", `List (List.map json_of_rterm e.facts));
     ("query", json_of_query e.query);
-    ("sources", `List (List.map json_of_source e.sources));
+    ("sources", `List (List.map json_of_table e.sources));
     ("view", json_of_view e.view);
     ("constraints", `List (List.map json_of_constraint' e.constraints));
     ("primary_keys", `List (List.map json_of_primary_key e.primary_keys))
